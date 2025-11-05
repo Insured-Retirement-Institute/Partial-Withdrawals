@@ -80,7 +80,7 @@ The schema is organized into nested objects with attributes defined by:
 - Definition
 
 ## Business Owners 
-- Carrier Business Owner: contact
+- Carrier Business Owner: digitalfirst@brighthousefinancial.com
 - Distributor Business Owner: contact
 - Solution Provider Business Owner: contact
 
