@@ -67,17 +67,55 @@ Objectives & Key Results:
 
 - Goals: Guide clients through partial withdrawal processes.
 - Needs: Clear understanding of payment forms, tax implications, and beneficiary details.
-- Pain Points: Confusing terminology, missing beneficiary data.
+- Pain Points: Confusing terminology, paper process.
 
 ## Schema Overview
-The schema is organized into nested objects with attributes defined by:
+The schema for partial withdrawal transactions is defined in the data model and includes the following key components:
+## Root Attributes
 
-- Attribute Name
-- Parent
-- Data Type
-- Data Length
-- Required
-- Definition
+- correlationId: Unique transaction ID (string, required)
+- effectiveDate: Transaction date (string, required, format: yyyy-mm-dd)
+- reverseInitiator: Indicates reversal source (boolean, optional)
+- override: Rule override flag (boolean, optional)
+- caseId: Live Case ID (string, optional)
+- associatedFirmId: Firm identifier (string, required)
+- NSCCparticipantID: NSCC participant identifier (string, required)
+
+## Tax Withholding Instructions
+
+- party: Payee/beneficiary details (ID, name, organization)
+- taxWithholdingType: Type of tax withholding (string, required)
+- taxRateToUse: Payment mode for tax withholding (string, required)
+- filingStatus: Tax filing status (string, optional)
+- dollar/percentage/exemptions: Requested values (optional)
+- taxJurisdiction: Jurisdiction for tax purposes (optional)
+
+## Payee/Beneficiary Details
+
+- partyId, firstName, middleName, lastName, organizationName: Identification fields
+- paymentForm: Type of payment (string, optional)
+- allocationPercent: Allocation percentage (number, optional)
+- bank: Bank details (account number, routing number, etc.)
+- address: Physical/mailing address details
+
+## Parties
+
+- partyRole, partyId, firstName, middleName, lastName, organizationName
+- paymentForm, allocationPercentage
+- forBenefitOfOrForFurtherCredit: FBO/FFC notation (string, optional)
+- bank, address: Financial and contact details
+
+## Charges
+
+- chargeType, chargeWaiverIndicator, chargeWaiverReason
+
+## Producer
+
+- producerNumber, npn, crdNumber, associatedFirmId, NSCCparticipantID
+
+## Transaction Amounts
+
+- amountType, disbursementType, disbursementPaymentForm
 
 ## Business Owners 
 - Carrier Business Owner: digitalfirst@brighthousefinancial.com
