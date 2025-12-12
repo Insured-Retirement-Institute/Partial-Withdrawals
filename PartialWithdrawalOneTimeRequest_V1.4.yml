@@ -1,0 +1,537 @@
+openapi: 3.1.0
+info:
+  title: Partial Withdrawal One-Time API
+  version: 2.0.0
+  description: API for processing a one-time partial withdrawal transaction.
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+servers:
+  - url: https://api.your-company-domain.com
+    description: Production
+  - url: https://sandbox.your-company-domain.com
+    description: Sandbox
+paths:
+  /v1/policies/{policyNumber}/transactions/{transactionType}:
+    post:
+      summary: Create a partial-withdrawal-one-time transaction
+      operationId: partialWithdrawalTransaction
+      tags: [Partial Withdrawal]
+      parameters:
+        - $ref: '#/components/parameters/PolicyNumber'
+        - $ref: '#/components/parameters/TransactionType'
+        - $ref: '#/components/parameters/Cusip'
+        - $ref: '#/components/parameters/CorrelationIdHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PartialWithdrawalOneTimeRequest'
+            examples:
+              basic:
+                summary: Basic partial withdrawal
+                value:
+                  effectiveDate: '2025-01-15'
+                  transactionAmounts:
+                    amountType: AMOUNT
+                    disbursementType: GROSS
+                    requestedAmount: 1000.00
+                  fundAllocation:
+                    allocationOption: PRORATA
+                  payeeOrBeneficiary:
+                    - paymentForm: DTCC
+                      allocationPercentage: 100.00
+                      party:
+                        partyId: PAY001
+                        firstName: Jane
+                        lastName: Doe
+                  fundDistributions:
+                    - fundId: FND001
+                      fundName: Growth Fund
+                      totalFundValue: 0.00
+                      requestedAmount: 0.00
+                  taxWithholdingInstructions:
+                    taxWithholdingType: FEDERAL
+                    taxRateToUse: NOWITHHOLDINGELECTED
+                  isOverride: false
+      responses:
+        '200':
+          description: Successful creation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartialWithdrawalOneTimeResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Policy not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - oauth2: [withdrawal.write]
+components:
+  securitySchemes:
+    oauth2:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://auth.your-company-domain.com/oauth2/token
+          scopes:
+            withdrawal.write: Create partial withdrawal transactions
+            withdrawal.read: Read partial withdrawal transactions
+  parameters:
+    PolicyNumber:
+      name: policyNumber
+      in: path
+      required: true
+      description: Unique policy number (6–20 alphanumeric).
+      schema:
+        type: string
+        pattern: '^[A-Za-z0-9]{6,20}$'
+    TransactionType:
+      name: transactionType
+      in: path
+      required: true
+      description: Type of transaction being processed (currently only partial-withdrawal-one-time).
+      schema:
+        type: string
+        enum: [partial-withdrawal-one-time]
+        pattern: '^[a-z-]+$'
+    Cusip:
+      name: cusip
+      in: query
+      required: false
+      description: Optional; REQUIRED only when policyNumber is not globally unique.
+      x-conditionalRequirement: 'required when duplicate policyNumber exists'
+      schema:
+        type: string
+        pattern: '^[A-Za-z0-9]{5,9}$'
+    CorrelationIdHeader:
+      name: CorrelationId
+      in: header
+      required: true
+      description: Unique identifier to trace the request.
+      schema:
+        type: string
+        maxLength: 100
+  schemas:
+    MoneyAmount:
+      type: number
+      description: Monetary amount up to 10 digits plus 2 decimals.
+      minimum: 0
+      maximum: 9999999999.99
+    PercentageValue:
+      type: number
+      description: Percentage value 0-100.
+      minimum: 0
+      maximum: 100
+    PartialWithdrawalOneTimeRequest:
+      type: object
+      description: Request to perform a one-time partial withdrawal.
+      properties:
+        effectiveDate:
+          type: string
+          format: date
+          description: Date of transaction submission
+        associatedFirmId:
+          type: string
+          maxLength: 100
+          description: DTCC 4 byte identifier
+        cusip:
+          type: string
+          maxLength: 9
+          pattern: '^[A-Za-z0-9]{5,9}$'
+          description: unique identification code.
+        nsccParticipantId:
+          type: string
+          maxLength: 100
+          description: Unique identifier for the participant
+        producer:
+          $ref: '#/components/schemas/Producer'
+        transactionAmounts:
+          $ref: '#/components/schemas/TransactionAmounts'
+        fundAllocation:
+          $ref: '#/components/schemas/FundAllocation'
+        fundDistributions:
+          type: array
+          description: detailed allocation of funds
+          items:
+            $ref: '#/components/schemas/FundDistribution'
+        payeeOrBeneficiary:
+          type: array
+          description: list of payees or beneficiaries for allocation (each item previously singular). Must sum allocationPercentage to 100 if multiple.
+          items:
+            $ref: '#/components/schemas/PayeeOrBeneficiary'
+        parties:
+          $ref: '#/components/schemas/Parties'
+        taxWithholdingInstructions:
+          type: array
+          description: list of tax withholding instruction entries
+          items:
+            $ref: '#/components/schemas/TaxWithholdingInstruction'
+        charges:
+          $ref: '#/components/schemas/Charges'
+        isOverride:
+          type: boolean
+          description: Override rules if true
+      required:
+        - effectiveDate
+    PartialWithdrawalOneTimeResponse:
+      type: object
+      description: Minimal response returning only a message for the submitted transaction. Echoes CorrelationId from header.
+      properties:
+        message:
+          type: string
+          description: Human-readable outcome message.
+        correlationId:
+          type: string
+          description: Echo of request CorrelationId header.
+      required:
+        - message
+    Error:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        correlationId:
+          type: string
+      required:
+        - code
+        - message
+    Producer:
+      type: object
+      description: Information about the producer submitting the request
+      properties:
+        producerNumber:
+          type: string
+          maxLength: 100
+          description: Carrier assigned unique identifier
+        npn:
+          type: string
+          pattern: '^\d{1,10}$'
+          maxLength: 100
+          description: National Producer Number
+        crdNumber:
+          type: string
+          pattern: '^\d{1,10}$'
+          maxLength: 100
+          description: Central Registration Depository number
+    TransactionAmounts:
+      type: object
+      description: details of financial amounts associated with the transaction
+      properties:
+        requestedAmount:
+          allOf:
+            - $ref: '#/components/schemas/MoneyAmount'
+          description: Amount requested by the user
+        requestedPercentage:
+          allOf:
+            - $ref: '#/components/schemas/PercentageValue'
+          description: Percentage requested by the user
+        amountType:
+          type: string
+          enum: [AMOUNT, PERCENTAGE, MAX, FREEWITHDRAWALAMOUNT, WITHDRAWALUNTILBASIS, EARNINGSONLY, PRORATA]
+          description: Amount Type selected by user
+        disbursementType:
+          type: string
+          enum: [GROSS, NET, NETNET]
+          description: Type of amount for withdrawal such as Gross or Net
+        disbursementPaymentForm:
+          type: string
+          enum: [DTCC, EFT, ACH, CHECK, WIRE]
+          description: Type of disbursement method such as DTCC, EFT, etc.
+      required:
+        - amountType
+        - disbursementType
+      oneOf:
+        - required: [requestedAmount]
+        - required: [requestedPercentage]
+    FundAllocation:
+      type: object
+      description: Process of assigning available funds
+      properties:
+        allocationOption:
+          type: string
+          enum: [PRORATA, DOLLAR, SPECIFYPERCENTAGE, SPECIFIEDFUNDS, SPECIFIEDSEGMENTS, DEFAULT, PECKINGORDER, EARNINGSONLY]
+          description: Defines the format of how the funds are removed
+      required:
+        - allocationOption
+    FundDistribution:
+      type: object
+      description: Fund distribution details
+      properties:
+        fundId:
+          type: string
+          maxLength: 100
+          description: Fund identifier
+        fundName:
+          type: string
+          maxLength: 100
+          description: Name of the fund
+        totalFundValue:
+          allOf:
+            - $ref: '#/components/schemas/MoneyAmount'
+          description: Total value of the fund
+        requestedAmount:
+          allOf:
+            - $ref: '#/components/schemas/MoneyAmount'
+          description: Requested amount from the fund
+        fundDistributionSegment:
+          $ref: '#/components/schemas/FundDistributionSegment'
+      # No required fields per Data Dictionary; all optional
+    FundDistributionSegment:
+      type: object
+      description: fund distributed to different segments
+      properties:
+        segmentId:
+          type: string
+          maxLength: 100
+          description: Segment identifier
+        currentAmount:
+          allOf:
+            - $ref: '#/components/schemas/MoneyAmount'
+          description: Current amount in the segment
+        requestedAmount:
+          allOf:
+            - $ref: '#/components/schemas/MoneyAmount'
+          description: Requested amount from the segment
+    PayeeOrBeneficiary:
+      type: object
+      description: single payee or beneficiary entry
+      properties:
+        paymentForm:
+          type: string
+          maxLength: 20
+          description: Type of payment form
+        allocationPercentage:
+          type: number
+          minimum: 0
+          maximum: 9999999999.99
+          description: Allocation percentage
+        party:
+          allOf:
+            - $ref: '#/components/schemas/PartyIdentity'
+          description: all relevant parties associated with the policy
+        bank:
+          allOf:
+            - $ref: '#/components/schemas/Bank'
+          description: financial instituation
+        address:
+          allOf:
+            - $ref: '#/components/schemas/Address'
+          description: physical or mailing address details such as street,city etx
+    Address:
+      type: object
+      description: physical or mailing address details such as street,city etx
+      properties:
+        addressId:
+          type: string
+          maxLength: 100
+          description: Address identifier
+        addressType:
+          type: string
+          enum: [RESIDENCE, BUSINESS, POBOXSEASONAL, OTHER]
+          maxLength: 30
+          description: Type of address
+        addressLine1:
+          type: string
+          maxLength: 100
+          description: First line of the address
+        addressLine2:
+          type: string
+          maxLength: 100
+          description: Second line of the address
+        addressLine3:
+          type: string
+          maxLength: 100
+          description: Third line of the address
+        city:
+          type: string
+          maxLength: 100
+          description: City name
+        state:
+          type: string
+          maxLength: 2
+          pattern: '^[A-Z]{2}$'
+          description: State code (2-digit ISO)
+        zipCode:
+          type: string
+          maxLength: 10
+          pattern: '^[0-9A-Za-z -]{3,10}$'
+          description: Zip code
+        zipCodeExtension:
+          type: string
+          maxLength: 4
+          pattern: '^[0-9A-Za-z]{1,4}$'
+          description: Zip code extension
+        country:
+          type: string
+          maxLength: 2
+          pattern: '^[A-Z]{2}$'
+          description: Country code (2-digit ISO)
+    Bank:
+      type: object
+      description: financial instituation
+      properties:
+        bankId:
+          type: string
+          maxLength: 100
+          description: Bank identifier
+        nameOnAccount:
+          type: string
+          maxLength: 100
+          description: Name on the bank account
+        accountStatus:
+          type: string
+          enum: [ACTIVEBANKACCOUNT, TERMINATEDBANKACCOUNT]
+          description: Status of the bank account
+        accountType:
+          type: string
+          enum: [CHECKING, SAVINGS, CREDITCARDACCOUNT, DEBITCARDACCOUNT, BROKERAGEACCOUNT, CERTIFICATEOFDEPOSITACCOUNT]
+          description: Type of the bank account
+        accountNumber:
+          type: string
+          maxLength: 17
+          description: Bank account number
+          pattern: '^\d{4,17}$'
+        routingNumber:
+          type: string
+          maxLength: 9
+          pattern: '^\d{9}$'
+          description: Routing number
+        branchName:
+          type: string
+          maxLength: 100
+          description: Branch name
+    PartyIdentity:
+      type: object
+      description: Common party identity fields.
+      properties:
+        partyId:
+          type: string
+          maxLength: 100
+          description: Payee identifier
+        firstName:
+          type: string
+          maxLength: 100
+          description: First name
+        middleName:
+          type: string
+          maxLength: 100
+          description: Middle name
+        lastName:
+          type: string
+          maxLength: 100
+          description: Last name
+        organizationName:
+          type: string
+          maxLength: 100
+          description: Organization name
+    Parties:
+      type: array
+      description: party to the policy (that is not a producer) and may be an individual or another legal entity.
+      items:
+        $ref: '#/components/schemas/Party'
+    Party:
+      allOf:
+        - $ref: '#/components/schemas/PartyIdentity'
+        - type: object
+          description: Detailed party information for policy-level distribution.
+          properties:
+            partyRole:
+              type: string
+              maxLength: 30
+              description: Role of the party in the transaction
+            paymentForm:
+              type: string
+              maxLength: 20
+              description: Mode of payment
+            allocationPercentage:
+              type: number
+              minimum: 0
+              maximum: 100
+              description: Allocation percentage at policy level
+            bank:
+              allOf:
+                - $ref: '#/components/schemas/Bank'
+            address:
+              allOf:
+                - $ref: '#/components/schemas/Address'
+          required:
+            - partyId
+            - paymentForm
+            - allocationPercentage
+    Charges:
+      type: array
+      description: List of charges (fees and deductions) applied to the transaction
+      items:
+        type: object
+        properties:
+          chargeType:
+            type: string
+            maxLength: 30
+            description: Type of charge
+          chargeWaiverIndicator:
+            type: string
+            maxLength: 3
+            description: Indicates if charge is waived
+          chargeWaiverReason:
+            type: string
+            maxLength: 100
+            description: Reason for charge waiver
+    TaxWithholdingInstruction:
+      type: object
+      description: information about tax withholding details
+      properties:
+        party:
+          allOf:
+            - $ref: '#/components/schemas/PartyIdentity'
+            - type: object
+              required:
+                - partyId
+          description: all relevant parties associated with the policy
+        taxWithholdingType:
+          type: string
+          enum: [FEDERAL, STATE, NRA, BACKUP]
+          description: Type of tax withholding
+        taxRateToUse:
+          type: string
+          enum: [NOWITHHOLDINGELECTED, USEVALUESENTERED, NOWITHHOLDINGALLOWED, USEDEFAULTTABLE]
+          description: Mode Of Payment
+        filingStatus:
+          type: string
+          enum: [SINGLE, DOMESTICPARTNERSHIP, DEFAULT, MARRIED, HEADOFHOUSEHOLD, WIDOWED, DIVORCED]
+          description: Tax filing status
+        dollar:
+          $ref: '#/components/schemas/MoneyAmount'
+        percentage:
+          $ref: '#/components/schemas/PercentageValue'
+        exemptions:
+          type: integer
+          minimum: 0
+          maximum: 99
+          description: Requested exemptions value
+        taxJurisdiction:
+          type: string
+          maxLength: 50
+          description: Jurisdiction for tax purposes
+      required:
+        - taxWithholdingType
+        - taxRateToUse
+security:
+  - oauth2: [withdrawal.write] 
