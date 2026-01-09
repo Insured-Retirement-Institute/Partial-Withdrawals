@@ -1,135 +1,140 @@
-# Partial Withdrawals Attribute Specification
 
-This repository contains the schema definition for Partial Withdrawals, supporting the modernization of In-Force Transactions (IFT) by transitioning from legacy XML/SOAP messaging to RESTful APIs. This aligns with the industry’s Digital First goals and prepares stakeholders for scalable, secure, and interoperable retirement policy management.
-
-## Get started
-To begin using this specification:
-
-1. Clone the repository:
-Shellgit clone https://github.com/Insured-Retirement-Institute/Partial-Withdrawals.git
-
-2. Navigate to the project directory:
-Shellcd Partial-WithdrawalsShow more lines
-
-3. Review the schema documentation:
-
-- Understand the structure and required fields.
-- Integrate the schema into your transaction processing systems.
+# IRI Systematic Program Setup API
 
 
-4. Validate your data:
+# **Systematic Program Setup Attribute Specification**
 
-- Ensure all required fields are populated.
-- Follow the data types and length constraints.
+This repository contains the schema definitions for **Systematic Withdrawal** and **Systematic RMD (Required Minimum Distribution)** program setup transactions. These specifications support the modernization of In-Force Transactions (IFT) by transitioning from legacy XML/SOAP messaging to RESTful APIs. This aligns with the industry’s Digital First goals and prepares stakeholders for scalable, secure, and interoperable retirement policy management.
+
+---
 
 ## Business Case
 The financial services industry is rapidly evolving toward seamless, real-time, and lightweight digital experiences. Legacy XML/SOAP technology is approaching end-of-life and lacks the scalability, flexibility, and security required by today’s digital ecosystems. RESTful APIs, using JSON payloads and OAuth 2.0 authentication, are now the de facto standard.
-Key Drivers:
-
+### Problem Statement
 - End-of-Life Technology: SOAP is no longer supported; REST/JSON is prioritized by vendors and cloud providers.
 - Security: Modern protocols (OAuth 2.0) are required.
 - Scalability & Flexibility: REST APIs are lightweight, easier to parse, and integrate with microservices.
 - Industry Alignment: Supports IRI Digital First goals for secure, interoperable technology.
 
-Objectives & Key Results:
-
+### Objectives
 - Transition all IFT processing from XML to RESTful API architecture.
 - Reduce transaction payload size and processing time.
 - Improve integration velocity across firms and carriers.
 - Strengthen transaction security.
 - Ensure long-term vendor and community support.
 
-## User Stories, personna - supporting documents for the business case
+### Key Features
+- Modular RESTful APIs with JSON payloads and OAuth 2.0 authentication.
+- OpenAPI/Swagger documentation for easy onboarding.
+- Accelerated development using validated payload structures.
+- Standardized testing framework for early and consistent validation.
+- Open contribution to IRI standards for industry-wide adoption.
+
+---
+
+## Supported Transactions
+
+### 1. Schema Overview
+The schema for systematic program setup transactions is defined in the data model and includes the following key components for both Systematic Withdrawal and Systematic RMD:
+
+#### User Stories
 - As a Policy Administrator, I want to validate all required fields before submitting a transaction so that I can avoid processing delays.
 - As a System Integrator, I want to map the schema to our internal data model so that we can automate the transaction flow.
-- As a Compliance Analyst, I want to extract tax jurisdiction and exemption data so that I can verify regulatory compliance.
 - As a Financial Advisor, I want to confirm the payee’s bank and address details so that I can ensure accurate disbursement.
 
-1. Policy Administrator
-
-- Goals: Ensure accurate and timely processing of partial withdrawals.
+#### Personas
+**Policy Administrator**  
+- Goals: Ensure accurate and timely processing of systematic withdrawals and RMDs.
 - Needs: Clear schema definitions, validation rules, and integration guidance.
 - Pain Points: Manual data entry errors, inconsistent formats, lack of traceability.
 
-2. System Integrator
-
+**System Integrator**  
 - Goals: Implement schema into backend systems and APIs.
-- Needs: JSON/XML schema formats, sample payloads, field-level documentation.
+- Needs: JSON schema formats, sample payloads, field-level documentation.
 - Pain Points: Ambiguous field definitions, missing required attributes.
 
-3. Compliance Analyst
-
-- Goals: Ensure transactions meet regulatory standards.
-- Needs: Audit trails, jurisdictional tax details, exemption tracking.
-- Pain Points: Incomplete data, lack of standardization.
-
-4. Financial Advisor
-
-- Goals: Guide clients through partial withdrawal processes.
+**Financial Advisor**  
+- Goals: Guide clients through systematic withdrawal and RMD processes.
 - Needs: Clear understanding of payment forms, tax implications, and beneficiary details.
 - Pain Points: Confusing terminology, paper process.
 
+---
 ## Schema Overview
-The schema for partial withdrawal transactions is defined in the data model and includes the following key components:
-## Root Attributes
+The schema for systematic program setup transactions is defined in the data model and includes the following key components for both Systematic Withdrawal and Systematic RMD:
+
+### Root Attributes
 
 - correlationId: Unique transaction ID (string, required)
 - effectiveDate: Transaction date (string, required, format: yyyy-mm-dd)
-- reverseInitiator: Indicates reversal source (boolean, optional)
-- override: Rule override flag (boolean, optional)
-- caseId: Live Case ID (string, optional)
+- actionIndicator: Transaction action (enum: N, O, C)
 - associatedFirmId: Firm identifier (string, required)
-- NSCCparticipantID: NSCC participant identifier (string, required)
+- nsccParticipantId: NSCC participant identifier (string, required)
+- externalArrangementId: Arrangement ID from external system (string, required)
+- cusip: Security identifier (string, optional)
 
-## Tax Withholding Instructions
+### Systematic Program
 
-- party: Payee/beneficiary details (ID, name, organization)
-- taxWithholdingType: Type of tax withholding (string, required)
-- taxRateToUse: Payment mode for tax withholding (string, required)
-- filingStatus: Tax filing status (string, optional)
-- dollar/percentage/exemptions: Requested values (optional)
-- taxJurisdiction: Jurisdiction for tax purposes (optional)
+- paymentForm: Type of payment (enum: DTCC, CREDITCARD, ACH, CHECK, WIRE, EXCHANGE)
+- arrangementType: WITHDRAWAL or REQUIREDMINIMUMDISTRIBUTION
+- amountType: AMOUNT, PERCENTAGE, MAX, FREEWITHDRAWALAMOUNT, WITHDRAWALUNTILBASIS, EARNINGSONLY, PRORATA
+- netGrossIndicator: Net or Gross (enum: N, G)
+- requestedAmount/requestedPercentage: Amount or percentage, as applicable
+- frequency: Transaction frequency (enum: DAILY, EVERYTWOWEEKS, MONTHLY, SEMIANNUAL, QUARTERLY, ANNUAL, SINGLEPAYMENT)
+- startDate, endDate, previousTransactionDate, nextTransactionDate: Date fields
 
-## Payee/Beneficiary Details
+### For Systematic RMD Only:
 
-- partyId, firstName, middleName, lastName, organizationName: Identification fields
-- paymentForm: Type of payment (string, optional)
-- allocationPercent: Allocation percentage (number, optional)
+- rmdInfo: RMD-specific details (tax year, age at distribution, spouse DOB, requested amount, calculation method, prior year end value)
+
+### Payee/Beneficiary Details
+
+- partyId, firstName, middleName, lastName, organizationName
 - bank: Bank details (account number, routing number, etc.)
-- address: Physical/mailing address details
+- taxWithholdingInstructions: Array of tax withholding instructions
 
-## Parties
+### Parties
 
 - partyRole, partyId, firstName, middleName, lastName, organizationName
 - paymentForm, allocationPercentage
-- forBenefitOfOrForFurtherCredit: FBO/FFC notation (string, optional)
 - bank, address: Financial and contact details
 
-## Charges
+### Producer
 
-- chargeType, chargeWaiverIndicator, chargeWaiverReason
+- producerNumber, npn, crdNumber
 
-## Producer
+### Fund Allocation & Distributions
 
-- producerNumber, npn, crdNumber, associatedFirmId, NSCCparticipantID
+- allocationOption: PRORATA, DOLLAR, SPECIFYPERCENTAGE, SPECIFIEDFUNDS, etc.
+- fundDistributions: Array of fund distribution objects
 
-## Transaction Amounts
+---
 
-- amountType, disbursementType, disbursementPaymentForm
+## Change Submissions and Reporting Issues
 
-## Business Owners 
-- Carrier Business Owner: digitalfirst@brighthousefinancial.com
-- Distributor Business Owner: contact
-- Solution Provider Business Owner: contact
+- Issues and bugs can be reported directly within the **Issues** tab of this repository.
+- **Security issues** should be reported directly to Katherine Dease at **kdease@irionline.org**.
+- Change requests should follow the **standards governance workflow** outlined on the main page.
 
-## How to engage, contribute, and give feedback
-- These working groups are occuring on ....
-- Please contact the business owners or IRI (hpikus@irionline.org) to get added to the working group discussions. 
+---
 
-## Change subsmissions and reporting issues and bugs
+## Code of Conduct
 
-Security issues and bugs should be reported directly to Katherine Dease kdease@irionline.org. Issues and bugs can be reported directly within the issues tab of a repository. Change requests should follow the standards governance workflow outlined on the [main page](https://github.com/Insured-Retirement-Institute).
+Please review and adhere to the **Code of Conduct** and **Style Guide** provided in the repository to ensure consistency and professionalism.
 
-## Code of conduct
+---
 
-See [style guide](https://github.com/Insured-Retirement-Institute/Style-Guide)
+## How to Contribute
+
+- Fork the repo and submit pull requests.
+- Report issues via the **Issues** tab.
+- Join working groups: **hpikus@irionline.org**.
+
+---
+
+## Business Owners
+
+- **Carrier Business Owner:** digitalfirst@brighthousefinancial.com  
+- **Distributor Business Owner:** [contact]  
+- **Solution Provider Business Owner:** [contact]
+
+  
