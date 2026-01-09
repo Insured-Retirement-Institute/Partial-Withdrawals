@@ -1,5 +1,5 @@
 
-# IRI Withdrawals API
+# IRI Systematic Program Setup API
 
 
 # **Systematic Program Setup Attribute Specification**
